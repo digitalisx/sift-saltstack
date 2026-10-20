@@ -14,7 +14,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: apply mulder state
         continue-on-error: true
-        run: salt-call --local -l info --file-root . --retcode-passthrough --state-output=mixed state.sls sift.python3-packages.mulder pillar="{sift_user: root}"
+        run: |
+          salt-call --local -l info --file-root . --retcode-passthrough --state-output=mixed state.sls sift.python3-packages.mulder pillar="{sift_user: root}"
       - name: dump apt state
         if: always()
         run: |
