@@ -1,0 +1,40 @@
+name: debug-ppa-matrix
+on: workflow_dispatch
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        method: [add-apt-repository, salt-pkgrepo]
+        remove_sources_list: [true, false]
+    container:
+      image: docker://ghcr.io/ekristen/cast-tools/saltstack-tester:22.04-3007
+    steps:
+      - name: prepare apt sources
+        run: |
+          set -x
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq software-properties-common >/dev/null
+          if [ "${{ matrix.remove_sources_list }}" = "true" ]; then
+            printf 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: jammy jammy-updates jammy-backports\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' >> /etc/apt/sources.list.d/ubuntu.sources
+            rm -f /etc/apt/sources.list
+          fi
+      - name: add ppa
+        run: |
+          set -x
+          if [ "${{ matrix.method }}" = "add-apt-repository" ]; then
+            add-apt-repository -y ppa:dotnet/backports 2>&1 | grep -E "Adding|Found|Updating|Archive" || true
+          else
+            salt-call --local -l info state.single pkgrepo.managed name=dotnet-backports ppa=dotnet/backports refresh=true 2>&1 | grep -vE "^\s*$" | tail -25
+          fi
+      - name: inspect
+        if: always()
+        run: |
+          set -x
+          ls -l /etc/apt/sources.list /etc/apt/sources.list.d/ || true
+          echo "== sources.list"; cat /etc/apt/sources.list || true
+          echo "== dotnet list"; cat /etc/apt/sources.list.d/*dotnet* || true
+          apt-get update -qq || true
+          apt-cache policy dotnet-sdk-9.0 | head -4
