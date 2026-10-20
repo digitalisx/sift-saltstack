@@ -20,6 +20,7 @@ jobs:
         if: always()
         run: |
           set -x
+          echo "== /etc/apt/sources.list"; cat -A /etc/apt/sources.list || true
           ls -l /etc/apt/sources.list* /etc/apt/sources.list.d/ /etc/apt/trusted.gpg.d/ /etc/apt/keyrings/ || true
           for f in /etc/apt/sources.list.d/*; do echo "== $f"; cat "$f"; done
           apt-get update 2>&1 | grep -iE "dotnet|NO_PUBKEY|W:|E:" || true
